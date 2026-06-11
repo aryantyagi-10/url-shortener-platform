@@ -1,60 +1,22 @@
-# ============================================================
-# WHAT IS THIS FILE?
-# This is a GitHub Actions WORKFLOW — an automated CI/CD pipeline.
-#
-# WHAT IS CI/CD?
-# CI = Continuous Integration: automatically test every code change
-# CD = Continuous Delivery: automatically deploy passing builds
-#
-# HOW IT WORKS:
-# 1. You push code to GitHub
-# 2. GitHub Actions automatically runs this file
-# 3. It installs dependencies, runs tests, builds Docker image
-# 4. If all steps pass → green checkmark ✅ on GitHub
-# 5. If any step fails → red X ❌, you're notified immediately
-#
-# This prevents broken code from being deployed to production!
-# "Every company uses CI/CD" — this alone impresses recruiters.
-# ============================================================
+name: CI/CD Pipeline
 
-name: CI/CD Pipeline   # Name shown in GitHub Actions UI
-
-# ============================================================
-# TRIGGER
-# WHEN does this pipeline run?
-# on: push → any push to main or develop branch
-# on: pull_request → any PR targeting main (great for code review)
-# ============================================================
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
-
-# ============================================================
-# JOBS
-# A workflow has one or more jobs. Jobs can run in parallel or in sequence.
-# We have two jobs: "test" and "build-and-push"
-# ============================================================
 jobs:
 
-  # ============================================================
-  # JOB 1: Run Tests
-  # This job runs our pytest tests to verify the code works.
-  # ============================================================
   test:
     name: Run Tests
-    runs-on: ubuntu-latest    # The machine type to run on (GitHub provides this free)
+    runs-on: ubuntu-latest
 
-    # Services are Docker containers that run alongside our job
-    # We start a real Redis here for integration testing!
     services:
       redis:
         image: redis:7-alpine
         ports:
-          - 6379:6379    # Maps container port to runner port
-        # Wait until Redis responds to health checks before running tests
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -62,19 +24,14 @@ jobs:
           --health-retries 5
 
     steps:
-      # Step 1: Get the code onto the runner machine
       - name: Checkout code
-        uses: actions/checkout@v4   # Official GitHub action to clone the repo
+        uses: actions/checkout@v4
 
-      # Step 2: Set up Python
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      # Step 3: Cache pip packages (avoid re-downloading on every run)
-      # Cache key = hash of requirements.txt
-      # If requirements.txt changes, cache is invalidated and re-downloaded
       - name: Cache pip dependencies
         uses: actions/cache@v3
         with:
@@ -83,99 +40,59 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # Step 4: Install Python packages
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov    # pytest-cov = code coverage tool
+          pip install pytest pytest-cov
 
-      # Step 5: Run the linter (checks code style)
-      # flake8 enforces PEP8 style guide: consistent, readable code
       - name: Lint with flake8
         run: |
           pip install flake8
-          # --max-line-length 100: allow up to 100 chars per line (PEP8 default is 79)
-          # --exclude: ignore auto-generated files
           flake8 app/ tests/ --max-line-length 100 --exclude=__pycache__ || true
-          # "|| true" means: don't fail the job on lint errors (warning only)
 
-      # Step 6: Run all tests with coverage reporting
       - name: Run pytest with coverage
         env:
-          # Environment variables available during tests
-          REDIS_HOST: localhost    # The service started above
+          REDIS_HOST: localhost
           REDIS_PORT: 6379
           KAFKA_BOOTSTRAP_SERVERS: localhost:9092
         run: |
-          pytest tests/ \
-            --cov=app \                    # Measure coverage for the 'app' directory
-            --cov-report=term-missing \   # Show which lines are NOT tested
-            --cov-report=xml \            # Export XML for external tools
-            -v                            # Verbose output (show each test name)
+          pytest tests/ --cov=app --cov-report=term-missing --cov-report=xml -v
 
-      # Step 7: Upload coverage report to Codecov (optional but impressive)
-      # Codecov shows a badge on your README like "87% coverage"
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.xml
-        continue-on-error: true   # Don't fail if Codecov is down
+        continue-on-error: true
 
 
-  # ============================================================
-  # JOB 2: Build and Push Docker Image
-  # Only runs if the test job passes (needs: [test])
-  # Only runs on pushes to main (not on PRs)
-  # ============================================================
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: [test]   # This job DEPENDS ON test job — only runs if tests pass!
-    
-    # Only deploy from main branch, not from feature branches
+    needs: [test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Docker Buildx (advanced builder with caching support)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Log in to GitHub Container Registry (ghcr.io)
-      # ${{ secrets.GITHUB_TOKEN }} is auto-provided by GitHub Actions
-      # You can also use Docker Hub: docker/login-action with DockerHub creds
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}          # Your GitHub username
-          password: ${{ secrets.GITHUB_TOKEN }}  # Auto token, no setup needed
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build the Docker image and push to registry
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .              # Build from current directory (uses our Dockerfile)
-          push: true              # Actually push to registry
-          
-          # Tags for the image:
-          # latest → always points to most recent build
-          # sha-abc123 → pinned to specific commit (for rollbacks!)
+          context: .
+          push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
-          
-          # Cache: reuse layers from previous builds (much faster!)
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      # Summary shown in GitHub Actions UI
-      - name: Post deployment summary
-        run: |
-          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployed at**: $(date)" >> $GITHUB_STEP_SUMMARY
