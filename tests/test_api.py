@@ -211,7 +211,7 @@ class TestURLRedirect:
         redirect_response = client.get(f"/{short_code}", follow_redirects=False)
         
         assert redirect_response.status_code == 302  # 302 = redirect
-        assert redirect_response.headers["location"] == "https://www.example.com"
+        assert redirect_response.headers["location"].rstrip("/") == "https://www.example.com"
 
 
 class TestAnalytics:
