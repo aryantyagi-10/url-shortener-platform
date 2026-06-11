@@ -140,7 +140,7 @@ async def redirect_to_original(short_code: str, request: Request):
     click_event = {
         "short_code": short_code,
         "timestamp": time.time(),
-        "ip_address": request.client.host,       # IP of the person clicking
+        "ip_address": request.client.host if request.client else "unknown",       # IP of the person clicking
         "user_agent": request.headers.get("user-agent", "unknown"),  # Their browser info
         "referer": request.headers.get("referer", "direct")          # Where they came from
     }
