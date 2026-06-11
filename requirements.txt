@@ -1,0 +1,43 @@
+# ============================================================
+# WHAT IS THIS FILE?
+# Lists all Python packages this project depends on.
+# "pip install -r requirements.txt" installs all of them at once.
+#
+# WHY PIN VERSIONS? (e.g. fastapi==0.110.0)
+# Pinning ensures EVERYONE uses the exact same version.
+# Without pins, a teammate running "pip install fastapi" might get
+# a newer version with breaking changes. Pinned = reproducible builds.
+# ============================================================
+
+# Web Framework
+fastapi==0.110.0          # The web framework — routes, validation, docs
+uvicorn[standard]==0.27.1  # ASGI server that runs FastAPI
+                           # [standard] includes websocket support + better performance
+
+# Data Validation
+pydantic==2.6.1           # Data models and validation (FastAPI depends on this)
+pydantic-settings==2.2.1  # Pydantic extension for settings/config management
+
+# Redis Client
+redis==5.0.1              # Python client for Redis
+                           # Supports connection pooling, Pub/Sub, pipelines
+
+# Kafka Client
+kafka-python==2.0.2       # Python client for Apache Kafka
+                           # Supports producers, consumers, admin client
+
+# HTTP Client (for testing / health checks)
+httpx==0.27.0             # Modern async HTTP client (used by FastAPI TestClient)
+
+# Testing
+pytest==8.0.0             # Testing framework
+pytest-asyncio==0.23.5    # Async test support (for async FastAPI endpoints)
+pytest-cov==4.1.0         # Code coverage measurement
+
+# Development / Code Quality
+flake8==7.0.0             # Linter — catches style issues and common bugs
+black==24.2.0             # Auto-formatter — formats code consistently
+isort==5.13.2             # Sorts import statements alphabetically
+
+# Environment management
+python-dotenv==1.0.1      # Load .env files for local development

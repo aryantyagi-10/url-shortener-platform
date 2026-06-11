@@ -1,0 +1,44 @@
+# ============================================================
+# WHAT IS THIS FILE?
+# .gitignore tells Git which files NOT to track/commit.
+# Private keys, passwords, compiled files should NEVER be in Git!
+# ============================================================
+
+# Python compiled files (auto-generated, not needed in Git)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments (each developer creates their own)
+venv/
+env/
+.venv/
+ENV/
+
+# Environment variables file (contains secrets!)
+.env
+.env.local
+.env.production
+
+# Test output
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# IDE files (personal preferences, not project files)
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+*.log
+logs/
+
+# OS files
+.DS_Store          # macOS Finder metadata
+Thumbs.db          # Windows Explorer thumbnails
